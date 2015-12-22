@@ -11,12 +11,14 @@ public class ChannelThread extends PircBot {
     String channel;
     User user;
     long lastSent;
+    private BotChannelThread botChannel;
 
     LinkedList<Submission> submissionQueue = new LinkedList<>();
 
-    public ChannelThread(User user, String channel) {
+    public ChannelThread(User user, String channel, BotChannelThread botChannel) {
         this.user = user;
         this.channel = channel;
+        this.botChannel = botChannel;
         this.lastSent = 0;
 //        this.setVerbose(true);
         try {

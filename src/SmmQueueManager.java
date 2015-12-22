@@ -1,3 +1,4 @@
+import irc.BotChannelThread;
 import irc.ChannelThread;
 import irc.User;
 
@@ -15,8 +16,10 @@ public class SmmQueueManager {
         User queueManager = new User(args[0]);
         LinkedList<String> channelNames = loadChannels(args[1]);
 
+        BotChannelThread botChannel = new BotChannelThread(queueManager, channels);
+
         for(String c : channelNames) {
-            ChannelThread channel = new ChannelThread(queueManager, c);
+            ChannelThread channel = new ChannelThread(queueManager, c, botChannel);
             channels.add(channel);
         }
 
