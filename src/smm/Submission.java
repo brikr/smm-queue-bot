@@ -1,8 +1,12 @@
 package smm;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class Submission {
-    String user, level;
-    long time;
+    public String user, level;
+    public long time;
 
     public Submission(String user, String level) {
         this.user = user;
@@ -11,6 +15,6 @@ public class Submission {
     }
 
     public String toString() {
-        return this.user + ": " + this.level + " at " + this.time;
+        return this.level + " by " + this.user;
     }
 }

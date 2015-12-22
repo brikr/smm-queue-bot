@@ -6,17 +6,18 @@ import smm.Submission;
 
 import java.io.IOException;
 import java.util.LinkedList;
-import java.util.Queue;
 
 public class ChannelThread extends PircBot {
     String channel;
     User user;
+    long lastSent;
 
     LinkedList<Submission> submissionQueue = new LinkedList<>();
 
     public ChannelThread(User user, String channel) {
         this.user = user;
         this.channel = channel;
+        this.lastSent = 0;
 //        this.setVerbose(true);
         try {
             this.setName(user.name);
@@ -33,12 +34,35 @@ public class ChannelThread extends PircBot {
             String[] command = message.substring(1).split(" "); // strip ! and separate into parameters
             switch(command[0]) {
                 case "submit":
+                    System.out.println("Received submission " + command[1] + " from " + sender);
                     submissionQueue.offer(new Submission(sender, command[1])); // add submission to queue
                     break;
                 case "print":
                     System.out.println(submissionQueue);
                     break;
+                case "next":
+                    System.out.println("Next level requested by " + sender + " in channel " + channel);
+                    // check for owner
+                    if(sender.toLowerCase().equals(channel.substring(1).toLowerCase())) {
+                        Submission next = submissionQueue.poll();
+                        if (next != null) {
+                            this.send("Next level: " + next);
+                        } else {
+                            this.send("No more levels in queue!");
+                        }
+                    }
+                    break;
             }
+        }
+    }
+
+    private void send(String message) {
+        long now = System.currentTimeMillis();
+        if(now - this.lastSent > 2000) {
+            this.sendMessage(this.channel, message + "\n");
+            this.lastSent = now;
+        } else {
+            System.out.println("Eating message: " + message);
         }
     }
 }
