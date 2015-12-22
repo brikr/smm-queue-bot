@@ -35,10 +35,10 @@ public class ChannelThread extends PircBot {
     protected void onMessage(String channel, String sender, String login, String hostname, String message) {
         System.out.printf("<%s> %s: %s\n", channel, sender, message);
 
-        if(message.startsWith("!")) {
+        if (message.startsWith("!")) {
             String[] command = message.substring(1).split(" "); // strip ! and separate into parameters
 
-            switch(command[0]) {
+            switch (command[0]) {
                 case "submit":
                     System.out.println("Received submission " + command[1] + " from " + sender);
                     submissionQueue.offer(new Submission(sender, command[1])); // add submission to queue
@@ -49,7 +49,7 @@ public class ChannelThread extends PircBot {
                 case "next":
                     System.out.println("Next level requested by " + sender + " in channel " + channel);
                     // check for owner
-                    if(isOwner(sender)) {
+                    if (isOwner(sender)) {
                         Submission next = submissionQueue.poll();
                         if (next != null) {
                             this.send("Next level: " + next);
@@ -65,7 +65,7 @@ public class ChannelThread extends PircBot {
     private void send(String message) {
         long now = System.currentTimeMillis();
 
-        if(now - this.lastSent > 2000) {
+        if (now - this.lastSent > 2000) {
             this.sendMessage(this.channel, message + "\n");
             this.lastSent = now;
         } else {

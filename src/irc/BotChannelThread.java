@@ -19,9 +19,9 @@ public class BotChannelThread extends ChannelThread {
 
     protected void onMessage(String channel, String sender, String login, String hostname, String message) {
         System.out.printf("<!%s> %s: %s\n", channel, sender, message);
-        if(message.startsWith("!")) {
+        if (message.startsWith("!")) {
             String[] command = message.substring(1).split(" "); // strip ! and separate into parameters
-            switch(command[0]) {
+            switch (command[0]) {
                 case "submit":
                     System.out.println("Received submission " + command[1] + " from " + sender);
                     submissionQueue.offer(new Submission(sender, command[1])); // add submission to queue
@@ -31,7 +31,7 @@ public class BotChannelThread extends ChannelThread {
                     break;
                 case "optin":
                     // check for presence
-                    if(!this.containsChannel("#" + sender)) {
+                    if (!this.containsChannel("#" + sender)) {
                         this.channels.add(new ChannelThread(this.user, "#" + sender, this));
                         this.checkpoint();
                     }
@@ -40,7 +40,11 @@ public class BotChannelThread extends ChannelThread {
                     this.channels.stream()
                             .filter(c -> c.channel.equals("#" + sender))
                             .findAny()
-                            .ifPresent(c -> { c.partChannel(c.channel); this.channels.remove(c); this.checkpoint(); });
+                            .ifPresent(c -> {
+                                c.partChannel(c.channel);
+                                this.channels.remove(c);
+                                this.checkpoint();
+                            });
                     break;
                 case "saveall":
                     this.checkpoint();
@@ -51,23 +55,11 @@ public class BotChannelThread extends ChannelThread {
 
     public synchronized void checkpoint() {
         System.out.println("Saving all data...");
-        // save channel names
         try {
             BufferedWriter br = new BufferedWriter(new FileWriter(new File("channels")));
-            for(ChannelThread c : this.channels) {
+            for (ChannelThread c : this.channels) {
                 br.write(c.channel + "\n");
-            }
-            br.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // save queues
-        try {
-            BufferedWriter br = new BufferedWriter(new FileWriter(new File("queues")));
-            for(ChannelThread c : this.channels) {
-                br.write(c.channel + "\n");
-                for(Submission s : c.submissionQueue) {
+                for (Submission s : c.submissionQueue) {
                     br.write(s.user + " " + s.level + " " + s.time + "\n");
                 }
             }
@@ -78,8 +70,8 @@ public class BotChannelThread extends ChannelThread {
     }
 
     private boolean containsChannel(String channel) {
-        for(ChannelThread c : this.channels) {
-            if(c.channel.equals(channel)) return true;
+        for (ChannelThread c : this.channels) {
+            if (c.channel.equals(channel)) return true;
         }
         return false;
     }

@@ -13,22 +13,19 @@ import java.util.stream.Collectors;
 public class SmmQueueManager {
     public static boolean on;
     private static LinkedList<ChannelThread> channels;
+    private static BotChannelThread botChannel;
+    private static User queueManager;
 
     public static void main(String[] args) {
         channels = new LinkedList<>();
-        User queueManager = new User("userinfo");
-        LinkedList<String> channelNames = loadChannels();
+        queueManager = new User("userinfo");
 
-        BotChannelThread botChannel = new BotChannelThread(queueManager, channels);
-
-        channels.addAll(channelNames.stream()
-                .map(c -> new ChannelThread(queueManager, c, botChannel))
-                .collect(Collectors.toList()));
-
-        loadQueues();
+        botChannel = new BotChannelThread(queueManager, channels);
+        loadChannels();
+        System.out.println("Data loaded.");
 
         try {
-            while(on) {
+            while (on) {
                 Thread.sleep(500);
             }
         } catch (InterruptedException e) {
@@ -36,39 +33,23 @@ public class SmmQueueManager {
         }
     }
 
-    private static void loadQueues() {
+    private static void loadChannels() {
         try {
-            Scanner scan = new Scanner(new File("queues"));
-            ChannelThread curr = channels.get(0);
-            while(scan.hasNextLine()) {
+            Scanner scan = new Scanner(new File("channels"));
+            ChannelThread curr = null;
+            while (scan.hasNextLine()) {
                 String line = scan.nextLine();
-                if(line.startsWith("#")) {
+                if (line.startsWith("#")) {
                     // update channel we are adding submission for
-                    curr = channels.stream()
-                            .filter(c -> c.channel.equals(line))
-                            .findAny()
-                            .get();
+                    curr = new ChannelThread(queueManager, line, botChannel);
+                    channels.add(curr);
                 } else {
                     // add submission entry
                     String[] submission = line.split(" ");
                     curr.submissionQueue.offer(new Submission(submission[0], submission[1], Long.parseLong(submission[2])));
                 }
             }
-        } catch (FileNotFoundException e) {}
-    }
-
-    private static LinkedList<String> loadChannels() {
-        LinkedList<String> channelNames = new LinkedList<>();
-
-        try {
-            Scanner scan = new Scanner(new File("channels"));
-            while(scan.hasNextLine()) {
-                channelNames.add(scan.nextLine());
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+        } catch (FileNotFoundException ignored) {
         }
-
-        return channelNames;
     }
 }
