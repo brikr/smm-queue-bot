@@ -19,3 +19,5 @@ out/
 # SMM Queue Bot sensitive files
 userinfo
 channels
+queues
+

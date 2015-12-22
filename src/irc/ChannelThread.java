@@ -8,12 +8,12 @@ import java.io.IOException;
 import java.util.LinkedList;
 
 public class ChannelThread extends PircBot {
-    String channel;
+    public String channel;
     User user;
     long lastSent;
     private BotChannelThread botChannel;
 
-    LinkedList<Submission> submissionQueue = new LinkedList<>();
+    public LinkedList<Submission> submissionQueue = new LinkedList<>();
 
     public ChannelThread(User user, String channel, BotChannelThread botChannel) {
         this.user = user;
@@ -21,10 +21,12 @@ public class ChannelThread extends PircBot {
         this.botChannel = botChannel;
         this.lastSent = 0;
 //        this.setVerbose(true);
+
         try {
             this.setName(user.name);
             this.connect("irc.twitch.tv", 6667, user.Oauth);
-            this.joinChannel(channel);
+            System.out.println("Joining channel " + this.channel);
+            this.joinChannel(this.channel);
         } catch (IOException | IrcException e) {
             e.printStackTrace();
         }
@@ -32,8 +34,10 @@ public class ChannelThread extends PircBot {
 
     protected void onMessage(String channel, String sender, String login, String hostname, String message) {
         System.out.printf("<%s> %s: %s\n", channel, sender, message);
+
         if(message.startsWith("!")) {
             String[] command = message.substring(1).split(" "); // strip ! and separate into parameters
+
             switch(command[0]) {
                 case "submit":
                     System.out.println("Received submission " + command[1] + " from " + sender);
@@ -60,11 +64,17 @@ public class ChannelThread extends PircBot {
 
     private void send(String message) {
         long now = System.currentTimeMillis();
+
         if(now - this.lastSent > 2000) {
             this.sendMessage(this.channel, message + "\n");
             this.lastSent = now;
         } else {
             System.out.println("Eating message: " + message);
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return this.channel.equals(((ChannelThread) o).channel);
     }
 }
