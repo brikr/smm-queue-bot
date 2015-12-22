@@ -49,7 +49,7 @@ public class ChannelThread extends PircBot {
                 case "next":
                     System.out.println("Next level requested by " + sender + " in channel " + channel);
                     // check for owner
-                    if(sender.toLowerCase().equals(channel.substring(1).toLowerCase())) {
+                    if(isOwner(sender)) {
                         Submission next = submissionQueue.poll();
                         if (next != null) {
                             this.send("Next level: " + next);
@@ -71,6 +71,10 @@ public class ChannelThread extends PircBot {
         } else {
             System.out.println("Eating message: " + message);
         }
+    }
+
+    private boolean isOwner(String user) {
+        return user.toLowerCase().equals(channel.substring(1).toLowerCase());
     }
 
     @Override

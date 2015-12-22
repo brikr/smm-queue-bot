@@ -10,7 +10,7 @@ import java.util.LinkedList;
 
 public class BotChannelThread extends ChannelThread {
 
-    private LinkedList<ChannelThread> channels;
+    public LinkedList<ChannelThread> channels;
 
     public BotChannelThread(User user, LinkedList<ChannelThread> channels) {
         super(user, "#" + user.name, null);
@@ -36,6 +36,12 @@ public class BotChannelThread extends ChannelThread {
                         this.checkpoint();
                     }
                     break;
+                case "optout":
+                    this.channels.stream()
+                            .filter(c -> c.channel.equals("#" + sender))
+                            .findAny()
+                            .ifPresent(c -> { c.partChannel(c.channel); this.channels.remove(c); this.checkpoint(); });
+                    break;
                 case "saveall":
                     this.checkpoint();
                     break;
@@ -43,7 +49,7 @@ public class BotChannelThread extends ChannelThread {
         }
     }
 
-    private void checkpoint() {
+    public synchronized void checkpoint() {
         System.out.println("Saving all data...");
         // save channel names
         try {
