@@ -1,6 +1,6 @@
 package smm;
 
-public class Submission {
+public class Submission implements Comparable {
     public String user, level;
     public long time;
 
@@ -18,5 +18,12 @@ public class Submission {
 
     public String toString() {
         return this.level + " by " + this.user;
+    }
+
+
+    @Override
+    public int compareTo(Object o) {
+        Submission s = (Submission) o;
+        return (int) (this.time - s.time);
     }
 }
