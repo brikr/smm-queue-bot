@@ -2,28 +2,29 @@ package irc;
 
 import org.jibble.pircbot.IrcException;
 import org.jibble.pircbot.PircBot;
+import org.jibble.pircbot.User;
 import smm.Channel;
 import smm.Submission;
-import sun.java2d.pipe.hw.AccelSurface;
 
 import java.io.*;
-import java.util.LinkedList;
-import java.util.Scanner;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 public class SMMQueueBot extends PircBot {
 
-    private final User user;
+    private static final long MESSAGE_INTERVAL = 2000;
+    private static final long CHECKPOINT_INTERVAL = 600000;
+    private static final long PRIORITY_INTERVAL = 300000;
+    private final String name;
     private final LinkedList<Channel> channels;
     private final MessageProcessor messageProcessor;
 
-    public SMMQueueBot(User user) {
-        this.user = user;
+    public SMMQueueBot(String name, String Oauth) {
+        this.name = name;
         this.channels = new LinkedList<>();
-        this.setName(user.name);
+
+        this.setName(this.name);
         try {
-            this.connect("irc.twitch.tv", 6667, this.user.Oauth);
+            this.connect("irc.twitch.tv", 6667, Oauth);
         } catch (IOException | IrcException e) {
             e.printStackTrace();
         }
@@ -32,8 +33,9 @@ public class SMMQueueBot extends PircBot {
 
         Timer upkeepTimer = new Timer();
         messageProcessor = new MessageProcessor(this);
-        upkeepTimer.scheduleAtFixedRate(messageProcessor, 0, 2000); // process message queue every 2 seconds
-        upkeepTimer.scheduleAtFixedRate(new AutoCheckpointer(this), 600000, 600000); // auto checkpoint every 10 minutes
+        upkeepTimer.scheduleAtFixedRate(messageProcessor, 0, MESSAGE_INTERVAL); // process message queue every 2 seconds
+        upkeepTimer.scheduleAtFixedRate(new AutoCheckpointer(this), (CHECKPOINT_INTERVAL + PRIORITY_INTERVAL) / 2, CHECKPOINT_INTERVAL); // auto checkpoint every 10 minutes
+        upkeepTimer.scheduleAtFixedRate(new PriorityManager(this), PRIORITY_INTERVAL, PRIORITY_INTERVAL); // update priorities every 5 minutes
     }
 
     protected void onMessage(String channel, String sender, String login, String hostname, String message) {
@@ -54,12 +56,12 @@ public class SMMQueueBot extends PircBot {
                     break;
                 case "optin":
                     // check for presence
-                    if (channel.equals("#" + user.name)) {
+                    if (channel.equals("#" + this.name)) {
                         this.addChannel(sender);
                     }
                     break;
                 case "optout":
-                    if (channel.equals("#" + user.name)) {
+                    if (channel.equals("#" + this.name)) {
                         this.leaveChannel(sender);
                     }
                     break;
@@ -128,6 +130,24 @@ public class SMMQueueBot extends PircBot {
         }
     }
 
+    private HashSet<String> getViewers(String channel) {
+        User[] users = this.getUsers(channel);
+        HashSet<String> viewers = new HashSet<>();
+
+        for (User user : users) {
+            viewers.add(user.getNick());
+        }
+
+        return viewers;
+    }
+
+    public void updatePriorities() {
+        for (Channel channel : this.channels) {
+            HashSet<String> viewers = this.getViewers(channel.channel);
+            channel.updatePriorities(viewers, PRIORITY_INTERVAL);
+        }
+    }
+
     public synchronized void checkpoint() {
         System.out.println("Saving all data...");
         try {
@@ -145,6 +165,7 @@ public class SMMQueueBot extends PircBot {
     }
 
     public void loadChannels() {
+        this.addChannel("#" + this.name, false);
         try {
             Scanner scan = new Scanner(new File("channels"));
             String channel = null;
@@ -194,8 +215,22 @@ class AutoCheckpointer extends TimerTask {
         this.smmQueueBot = smmQueueBot;
     }
 
+    @Override
     public void run() {
         smmQueueBot.checkpoint();
+    }
+}
+
+class PriorityManager extends TimerTask {
+    SMMQueueBot smmQueueBot;
+
+    public PriorityManager(SMMQueueBot smmQueueBot) {
+        this.smmQueueBot = smmQueueBot;
+    }
+
+    @Override
+    public void run() {
+        smmQueueBot.updatePriorities();
     }
 }
 
