@@ -4,6 +4,7 @@ import org.jibble.pircbot.IrcException;
 import org.jibble.pircbot.PircBot;
 import smm.Channel;
 import smm.Submission;
+import sun.java2d.pipe.hw.AccelSurface;
 
 import java.io.*;
 import java.util.LinkedList;
@@ -29,9 +30,10 @@ public class SMMQueueBot extends PircBot {
 
         this.loadChannels();
 
-        Timer messageProcessorTimer = new Timer();
+        Timer upkeepTimer = new Timer();
         messageProcessor = new MessageProcessor(this);
-        messageProcessorTimer.scheduleAtFixedRate(messageProcessor, 0, 2000);
+        upkeepTimer.scheduleAtFixedRate(messageProcessor, 0, 2000); // process message queue every 2 seconds
+        upkeepTimer.scheduleAtFixedRate(new AutoCheckpointer(this), 600000, 600000); // auto checkpoint every 10 minutes
     }
 
     protected void onMessage(String channel, String sender, String login, String hostname, String message) {
@@ -151,7 +153,7 @@ public class SMMQueueBot extends PircBot {
                 if (line.startsWith("#")) {
                     // update channel we are adding submission for
                     channel = line;
-                    this.addChannel(line);
+                    this.addChannel(line, false);
                 } else {
                     // add submission entry
                     String[] submission = line.split(" ");
@@ -165,10 +167,10 @@ public class SMMQueueBot extends PircBot {
 
 class MessageProcessor extends TimerTask {
     LinkedList<Message> messageQueue;
-    SMMQueueBot SMMQueueBot;
+    SMMQueueBot smmQueueBot;
 
     public MessageProcessor(SMMQueueBot SMMQueueBot) {
-        this.SMMQueueBot = SMMQueueBot;
+        this.smmQueueBot = SMMQueueBot;
 
         this.messageQueue = new LinkedList<>();
     }
@@ -181,7 +183,19 @@ class MessageProcessor extends TimerTask {
     public void run() {
         Message m = this.messageQueue.poll();
         if (m == null) return;
-        this.SMMQueueBot.sendMessage(m.channel, m.text);
+        this.smmQueueBot.sendMessage(m.channel, m.text);
+    }
+}
+
+class AutoCheckpointer extends TimerTask {
+    SMMQueueBot smmQueueBot;
+
+    public AutoCheckpointer(SMMQueueBot smmQueueBot) {
+        this.smmQueueBot = smmQueueBot;
+    }
+
+    public void run() {
+        smmQueueBot.checkpoint();
     }
 }
 
