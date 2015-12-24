@@ -11,9 +11,11 @@ import java.util.*;
 
 public class SMMQueueBot extends PircBot {
 
-    private static final long MESSAGE_INTERVAL = 2000;
-    private static final long CHECKPOINT_INTERVAL = 600000;
-    private static final long PRIORITY_INTERVAL = 300000;
+    private static final long MESSAGE_INTERVAL = 2000;      // 2 seconds
+    private static final long CHECKPOINT_INTERVAL = 600000; // 10 minutes
+    private static final long PRIORITY_INTERVAL = 300000;   // 5 minutes
+    private static final long HELP_INTERVAL = 60000;        // 1 minute
+    private long lastHelp = 0;
     private final String name;
     private final LinkedList<Channel> channels;
     private final MessageProcessor messageProcessor;
@@ -48,60 +50,83 @@ public class SMMQueueBot extends PircBot {
                     break;
                 case "next":
                     if (channel.equals("#" + sender)) {
-                        this.nextLevel(channel);
+                        Submission s = this.nextLevel(channel);
+                        if (s != null) {
+                            this.send(channel, "Next level: " + s);
+                        } else {
+                            this.send(channel, "Queue is empty!");
+                        }
                     }
-                    break;
-                case "print":
-//                    System.out.println(submissionQueue);
                     break;
                 case "optin":
                     // check for presence
                     if (channel.equals("#" + this.name)) {
-                        this.addChannel(sender);
+                        if (this.addChannel("#" + sender)) {
+                            this.send(channel, sender + ", I'm now processing queues in your channel. Type !optout to cancel at any time.");
+                        } else {
+                            this.send(channel, sender + ", you are already opted in!");
+                        }
                     }
                     break;
                 case "optout":
                     if (channel.equals("#" + this.name)) {
-                        this.leaveChannel(sender);
+                        if (this.leaveChannel("#" + sender)) {
+                            this.send(channel, sender + ", I'm no longer processing queues in your channel. Type !optin to rejoin.");
+                        } else {
+                            this.send(channel, sender + ", you are already opted out!");
+                        }
                     }
                     break;
                 case "saveall":
                     if (sender.equals("minikori")) {
+                        this.send(channel, "Saving queues...");
                         this.checkpoint();
+                        this.send(channel, "Queues saved.");
                     }
+                    break;
+                case "help":
+                    long now = System.currentTimeMillis();
+                    if (now - this.lastHelp > HELP_INTERVAL) {
+                        this.send(channel, "I'm SMMQueueBot by minikori. " +
+                                "Viewers, use !submit <level code> to submit a level. " +
+                                "Streamers, use !next to pull the next level from the queue. " + "" +
+                                "If you want to use the bot in your channel, go to twitch.tv/" + this.name + " and type !optin in the chat. " +
+                                "To follow my development or see more commands, checkout github.com/brikr/smm-queue-bot or follow @_minikori on Twitter.");
+                    }
+                    this.lastHelp = now;
                     break;
             }
         }
     }
 
-    private void addChannel(String channel, boolean checkpoint) {
+    private boolean addChannel(String channel, boolean checkpoint) {
+        if (this.getChannel(channel) != null) return false;
         this.joinChannel(channel);
         this.channels.add(new Channel(channel));
         if (checkpoint) {
             this.checkpoint();
         }
+        return true;
     }
 
-    private void addChannel(String channel) {
-        this.addChannel(channel, true);
+    private boolean addChannel(String channel) {
+        return this.addChannel(channel, true);
     }
 
-    private void leaveChannel(String channel) {
+    private boolean leaveChannel(String channel) {
+        if (this.getChannel(channel) == null) return false;
         this.partChannel(channel);
         this.channels.remove(this.getChannel(channel));
         this.checkpoint();
+        return true;
     }
 
-    private void nextLevel(String channel) {
+    private Submission nextLevel(String channel) {
         Channel c = this.getChannel(channel);
         if (c != null) {
-            Submission s = c.getNextLevel();
-            if (s != null) {
-                this.send(channel, "Next level: " + s);
-            } else {
-                this.send(channel, "Queue is empty!");
-            }
+            return c.getNextLevel();
         }
+        return null;
     }
 
     private void send(String channel, String message) {
@@ -204,7 +229,8 @@ class MessageProcessor extends TimerTask {
     public void run() {
         Message m = this.messageQueue.poll();
         if (m == null) return;
-        this.smmQueueBot.sendMessage(m.channel, m.text);
+        this.smmQueueBot.sendMessage(m.channel, m.message);
+        System.out.printf("<!%s> %s: %s\n", m.channel, smmQueueBot.getName(), m.message);
     }
 }
 
@@ -235,10 +261,10 @@ class PriorityManager extends TimerTask {
 }
 
 class Message {
-    String channel, text;
+    String channel, message;
 
     public Message(String channel, String text) {
         this.channel = channel;
-        this.text = text;
+        this.message = text;
     }
 }
