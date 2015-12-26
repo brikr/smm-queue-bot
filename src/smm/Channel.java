@@ -30,7 +30,7 @@ public class Channel {
 //                .filter(s -> viewers.contains(s.user))
 //                .forEach(s -> s.time -= priorityInterval);
         for (Submission s : submissionQueue) {
-            if (viewers.contains(s.user)) s.time -= priorityInterval;
+            if (viewers.contains(s.user)) s.time -= priorityInterval * 10; //TODO: think about a good multiplier here
         }
     }
 }
