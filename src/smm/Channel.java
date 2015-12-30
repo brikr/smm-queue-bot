@@ -13,11 +13,20 @@ public class Channel {
     }
 
     public void submitLevel(Submission s) {
-        this.submissionQueue.offer(s);
+        if (!this.submissionQueue.contains(s))
+            this.submissionQueue.offer(s);
     }
 
-    public Submission getNextLevel() {
-        return this.submissionQueue.poll();
+    public Submission getNextLevel(HashSet<String> viewers) {
+        // assuming this iterates through in priority order
+        //TODO: confirm the above statement
+        for (Submission s : this.submissionQueue) {
+            if (!s.present || viewers.contains(s.submitter)) {
+                submissionQueue.remove(s);
+                return s;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -27,10 +36,11 @@ public class Channel {
 
     public void updatePriorities(HashSet<String> viewers, long priorityInterval) {
 //        this.submissionQueue.stream()
-//                .filter(s -> viewers.contains(s.user))
+//                .filter(s -> viewers.contains(s.submitter))
 //                .forEach(s -> s.time -= priorityInterval);
         for (Submission s : submissionQueue) {
-            if (viewers.contains(s.user)) s.time -= priorityInterval * 10; //TODO: think about a good multiplier here
+            if (viewers.contains(s.submitter))
+                s.time -= priorityInterval * 10; //TODO: think about a good multiplier here
         }
     }
 }

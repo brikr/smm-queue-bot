@@ -3,10 +3,13 @@ package irc;
 import org.jibble.pircbot.IrcException;
 import org.jibble.pircbot.PircBot;
 import org.jibble.pircbot.User;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import smm.Channel;
 import smm.Submission;
 
 import java.io.*;
+import java.net.URL;
 import java.util.*;
 
 public class SMMQueueBot extends PircBot {
@@ -46,7 +49,11 @@ public class SMMQueueBot extends PircBot {
             String[] command = message.substring(1).split(" "); // strip ! and separate into parameters
             switch (command[0]) {
                 case "submit":
-                    this.submitLevel(channel, sender, command[1]);
+                    if(command.length > 2) {
+                        this.submitLevel(channel, sender, command[1], (command[2].equals("present")));
+                    } else {
+                        this.submitLevel(channel, sender, command[1], false);
+                    }
                     break;
                 case "next":
                     if (channel.equals("#" + sender)) {
@@ -54,7 +61,7 @@ public class SMMQueueBot extends PircBot {
                         if (s != null) {
                             this.send(channel, "Next level: " + s);
                         } else {
-                            this.send(channel, "Queue is empty!");
+                            this.send(channel, "No available levels!");
                         }
                     }
                     break;
@@ -124,7 +131,7 @@ public class SMMQueueBot extends PircBot {
     private Submission nextLevel(String channel) {
         Channel c = this.getChannel(channel);
         if (c != null) {
-            return c.getNextLevel();
+            return c.getNextLevel(this.getViewers(channel));
         }
         return null;
     }
@@ -140,30 +147,31 @@ public class SMMQueueBot extends PircBot {
         return null;
     }
 
-    private void submitLevel(String channel, String sender, String courseID) {
-        Submission s = new Submission(sender, courseID);
-        Channel c = this.getChannel(channel);
-        if (c != null) {
-            c.submitLevel(s);
-        }
+    private void submitLevel(String channel, String sender, String courseID, boolean present) {
+        Submission s = new Submission(sender, courseID, present);
+        this.submitLevel(channel, s);
     }
 
     private void submitLevel(String channel, Submission submission) {
         Channel c = this.getChannel(channel);
-        if (c != null) {
+        if (c != null && submission.id != null) {
             c.submitLevel(submission);
         }
     }
 
     private HashSet<String> getViewers(String channel) {
-        User[] users = this.getUsers(channel);
-        HashSet<String> viewers = new HashSet<>();
-
-        for (User user : users) {
-            viewers.add(user.getNick());
+        HashSet<String> rval = new HashSet<>();
+        try {
+            String raw = new Scanner(new URL("http://tmi.twitch.tv/group/user/" + channel.substring(1) + "/chatters").openStream(), "UTF-8").useDelimiter("\\A").next();
+            JSONObject json = new JSONObject(raw);
+            JSONArray viewers = json.getJSONObject("chatters").getJSONArray("viewers");
+            for(Object v : viewers) {
+                rval.add((String) v);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
-        return viewers;
+        return rval;
     }
 
     public void updatePriorities() {
@@ -180,7 +188,7 @@ public class SMMQueueBot extends PircBot {
             for (Channel c : this.channels) {
                 br.write(c.channel + "\n");
                 for (Submission s : c.submissionQueue) {
-                    br.write(s.user + " " + s.level + " " + s.time + "\n");
+                    br.write(s.submitter + " " + s.id + " " + s.time + " " +  s.present + "\n");
                 }
             }
             br.close();
@@ -203,7 +211,7 @@ public class SMMQueueBot extends PircBot {
                 } else {
                     // add submission entry
                     String[] submission = line.split(" ");
-                    this.submitLevel(channel, new Submission(submission[0], submission[1], Long.parseLong(submission[2])));
+                    this.submitLevel(channel, new Submission(submission[0], submission[1], Long.parseLong(submission[2]), submission[3].equals("true")));
                 }
             }
         } catch (FileNotFoundException ignored) {
