@@ -36,11 +36,12 @@ public class Submission implements Comparable {
     }
 
     public String toString() {
-        return String.format("%s by %s. ID: %s. Clear Rate: %.3f%%",
+        return String.format("%s by %s. ID: %s. Clear Rate: %.3f%%. Submitted by %s.",
                 this.title,
                 this.creator,
                 this.id,
-                this.clearRate * 100);
+                this.clearRate * 100,
+                this.submitter);
     }
 
     @Override
