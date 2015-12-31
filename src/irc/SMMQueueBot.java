@@ -96,7 +96,7 @@ public class SMMQueueBot extends PircBot {
                     if (now - this.lastHelp > HELP_INTERVAL) {
                         this.send(channel, "I'm SMMQueueBot by minikori. " +
                                 "Viewers, use !submit <level code> to submit a level. " +
-                                "Streamers, use !next to pull the next level from the queue. " + "" +
+                                "Streamers, use !next to pull the next level from the queue. " +
                                 "If you want to use the bot in your channel, go to twitch.tv/" + this.name + " and type !optin in the chat. " +
                                 "To follow my development or see more commands, checkout github.com/brikr/smm-queue-bot or follow @_minikori on Twitter.");
                     }
